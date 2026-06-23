@@ -6,10 +6,10 @@
 
 <style>
   body { font-family: sans-serif; padding: 10px; }
-  table { width: 100%; border-collapse: collapse; font-size: 1.1rem; }
-  th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-  .delivered { cursor: pointer; font-size: 1.5rem; }
-  select { font-size: 1rem; padding: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 1rem; }
+  th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+  .delivered { cursor: pointer; font-size: 1.4rem; }
+  select { font-size: 0.9rem; padding: 3px; }
 </style>
 
 <!-- Firebase -->
@@ -24,15 +24,20 @@
 <table id="checklist">
   <tr>
     <th>OR</th>
-    <th>Cart Type</th>
-    <th>Cart #</th>
-    <th>Delivered</th>
+
+    <th>Type 1</th>
+    <th>#1</th>
+    <th>Delivered 1</th>
+
+    <th>Type 2</th>
+    <th>#2</th>
+    <th>Delivered 2</th>
   </tr>
 </table>
 
 <script>
 // ------------------------------------------------------
-// 1. Firebase config (replace with your own)
+// 1. Firebase config
 // ------------------------------------------------------
 const firebaseConfig = {
   apiKey: "AIzaSyBDmO2Spu4ilqRyjvYOmTGt_ZEyvwRgiDY",
@@ -49,7 +54,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // ------------------------------------------------------
-// 2. Build table rows
+// 2. Build table rows (two carts per OR)
 // ------------------------------------------------------
 const table = document.getElementById("checklist");
 
@@ -60,7 +65,7 @@ for (let i = 1; i <= 28; i++) {
     <td>${i}</td>
 
     <td>
-      <select id="type-${i}">
+      <select id="type1-${i}">
         <option value=""></option>
         <option value="C">C</option>
         <option value="B">B</option>
@@ -69,43 +74,69 @@ for (let i = 1; i <= 28; i++) {
     </td>
 
     <td>
-      <select id="num-${i}">
+      <select id="num1-${i}">
         <option value=""></option>
         ${Array.from({length: 200}, (_, n) => `<option value="${n+1}">${n+1}</option>`).join("")}
       </select>
     </td>
 
-    <td class="delivered" id="del-${i}">⬜</td>
+    <td class="delivered" id="del1-${i}">⬜</td>
+
+    <td>
+      <select id="type2-${i}">
+        <option value=""></option>
+        <option value="C">C</option>
+        <option value="B">B</option>
+        <option value="BG">BG</option>
+      </select>
+    </td>
+
+    <td>
+      <select id="num2-${i}">
+        <option value=""></option>
+        ${Array.from({length: 200}, (_, n) => `<option value="${n+1}">${n+1}</option>`).join("")}
+      </select>
+    </td>
+
+    <td class="delivered" id="del2-${i}">⬜</td>
   `;
 
   table.appendChild(row);
 
-  // Add listeners
-  document.getElementById(`type-${i}`).onchange = () => updateRow(i);
-  document.getElementById(`num-${i}`).onchange = () => updateRow(i);
-  document.getElementById(`del-${i}`).onclick = () => toggleDelivered(i);
+  // Listeners for cart 1
+  document.getElementById(`type1-${i}`).onchange = () => updateRow(i);
+  document.getElementById(`num1-${i}`).onchange = () => updateRow(i);
+  document.getElementById(`del1-${i}`).onclick = () => toggleDelivered(i, 1);
+
+  // Listeners for cart 2
+  document.getElementById(`type2-${i}`).onchange = () => updateRow(i);
+  document.getElementById(`num2-${i}`).onchange = () => updateRow(i);
+  document.getElementById(`del2-${i}`).onclick = () => toggleDelivered(i, 2);
 }
 
 // ------------------------------------------------------
 // 3. Update Firebase when user changes something
 // ------------------------------------------------------
 function updateRow(i) {
-  const type = document.getElementById(`type-${i}`).value;
-  const num = document.getElementById(`num-${i}`).value;
+  const type1 = document.getElementById(`type1-${i}`).value;
+  const num1 = document.getElementById(`num1-${i}`).value;
+
+  const type2 = document.getElementById(`type2-${i}`).value;
+  const num2 = document.getElementById(`num2-${i}`).value;
 
   db.ref("checklist/" + i).update({
-    type: type,
-    num: num
+    cart1: { type: type1, num: num1 },
+    cart2: { type: type2, num: num2 }
   });
 }
 
-function toggleDelivered(i) {
-  const cell = document.getElementById(`del-${i}`);
+function toggleDelivered(i, cart) {
+  const cell = document.getElementById(`del${cart}-${i}`);
   const newVal = cell.textContent === "⬜" ? "✔️" : "⬜";
 
   cell.textContent = newVal;
 
-  db.ref("checklist/" + i).update({
+  db.ref(`checklist/${i}/cart${cart}`).update({
     delivered: newVal === "✔️"
   });
 }
@@ -118,10 +149,16 @@ db.ref("checklist").on("value", snapshot => {
 
   for (let i = 1; i <= 28; i++) {
     const row = data[i] || {};
+    const c1 = row.cart1 || {};
+    const c2 = row.cart2 || {};
 
-    document.getElementById(`type-${i}`).value = row.type || "";
-    document.getElementById(`num-${i}`).value = row.num || "";
-    document.getElementById(`del-${i}`).textContent = row.delivered ? "✔️" : "⬜";
+    document.getElementById(`type1-${i}`).value = c1.type || "";
+    document.getElementById(`num1-${i}`).value = c1.num || "";
+    document.getElementById(`del1-${i}`).textContent = c1.delivered ? "✔️" : "⬜";
+
+    document.getElementById(`type2-${i}`).value = c2.type || "";
+    document.getElementById(`num2-${i}`).value = c2.num || "";
+    document.getElementById(`del2-${i}`).textContent = c2.delivered ? "✔️" : "⬜";
   }
 });
 </script>
