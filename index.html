@@ -10,6 +10,20 @@
   th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
   .delivered { cursor: pointer; font-size: 1.4rem; }
   select { font-size: 0.9rem; padding: 3px; }
+
+  /* Pastel core colors */
+  .core-green  { background-color: #d8f5d0; }  /* General 1–6 */
+  .core-yellow { background-color: #fff7c2; }  /* Transplant 7–8 */
+  .core-red    { background-color: #ffd6d6; }  /* CV 9–10, 19–20 */
+  .core-blue   { background-color: #d6e8ff; }  /* Ortho 11–18 */
+  .core-purple { background-color: #ead6ff; }  /* Neuro 21–28 */
+
+  #resetBtn {
+    margin-top: 20px;
+    padding: 10px;
+    font-size: 1rem;
+    width: 100%;
+  }
 </style>
 
 <!-- Firebase -->
@@ -35,6 +49,8 @@
   </tr>
 </table>
 
+<button id="resetBtn">Reset All</button>
+
 <script>
 // ------------------------------------------------------
 // 1. Firebase config
@@ -54,7 +70,19 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // ------------------------------------------------------
-// 2. Build table rows (two carts per OR)
+// 2. Core color helper
+// ------------------------------------------------------
+function getCoreClass(i) {
+  if (i >= 1 && i <= 6) return "core-green";
+  if (i >= 7 && i <= 8) return "core-yellow";
+  if (i === 9 || i === 10 || i === 19 || i === 20) return "core-red";
+  if (i >= 11 && i <= 18) return "core-blue";
+  if (i >= 21 && i <= 28) return "core-purple";
+  return "";
+}
+
+// ------------------------------------------------------
+// 3. Build table rows (two carts per OR)
 // ------------------------------------------------------
 const table = document.getElementById("checklist");
 
@@ -62,7 +90,7 @@ for (let i = 1; i <= 28; i++) {
   const row = document.createElement("tr");
 
   row.innerHTML = `
-    <td>${i}</td>
+    <td class="${getCoreClass(i)}">${i}</td>
 
     <td>
       <select id="type1-${i}">
@@ -115,7 +143,7 @@ for (let i = 1; i <= 28; i++) {
 }
 
 // ------------------------------------------------------
-// 3. Update Firebase when user changes something
+// 4. Update Firebase when user changes something
 // ------------------------------------------------------
 function updateRow(i) {
   const type1 = document.getElementById(`type1-${i}`).value;
@@ -142,7 +170,7 @@ function toggleDelivered(i, cart) {
 }
 
 // ------------------------------------------------------
-// 4. Live sync from Firebase → UI
+// 5. Live sync from Firebase → UI
 // ------------------------------------------------------
 db.ref("checklist").on("value", snapshot => {
   const data = snapshot.val() || {};
@@ -161,6 +189,22 @@ db.ref("checklist").on("value", snapshot => {
     document.getElementById(`del2-${i}`).textContent = c2.delivered ? "✔️" : "⬜";
   }
 });
+
+// ------------------------------------------------------
+// 6. Reset All button
+// ------------------------------------------------------
+document.getElementById("resetBtn").onclick = () => {
+  if (!confirm("Clear all OR carts?")) return;
+
+  const blank = {
+    cart1: { type: "", num: "", delivered: false },
+    cart2: { type: "", num: "", delivered: false }
+  };
+
+  for (let i = 1; i <= 28; i++) {
+    db.ref("checklist/" + i).set(blank);
+  }
+};
 </script>
 
 </body>
